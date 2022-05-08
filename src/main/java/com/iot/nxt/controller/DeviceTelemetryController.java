@@ -32,59 +32,64 @@ public class DeviceTelemetryController {
 	public static final String iotHubOwnerConnectionString2 = "HostName=IoT-NxT-Hub.azure-devices.net;SharedAccessKeyName=iothubowner;DeviceId=NxTDevice1000;SharedAccessKey=Gu9lyR4z1jVWcvdIKMYBsCQ0Vlg+dgZOp+vpvOx3//0=";
 	public static final String iotHubReadConnectionString = "HostName=IoT-NxT-Hub.azure-devices.net;SharedAccessKeyName=ServiceAndRegistryRead;SharedAccessKey=BeGXClv7fL7f5x5fGVH2I/Oge7MRlNXe2ajOQCnc2dQ=";
 	public static final String deviceId = "NxTDevice1000";
+	public static final String DIRECTORY_PATH = ".\\jsonFiles";
+	
 //	DeviceTwin twinClient;
-
+	
+	
 	@GetMapping("/sendTele")
 	public boolean doStuff() {
-		try {
+		try{
 			sendMessages();
 			return true;
-		} catch (Exception ex) {
+		}catch(Exception ex){
 			ex.printStackTrace();
 		}
 		return false;
 	}
-
 	private void sendMessages() throws Exception {
-
-		// twinClient =
-		// DeviceTwin.createFromConnectionString(iotHubOwnerConnectionString2);
-
-		/* READ JSON FILES STARTS */
-		// COUNT NO OF JSON FILES IN jsonFiles Folder
-		File directory = new File(".\\jsonFiles");
+		
+		//twinClient = DeviceTwin.createFromConnectionString(iotHubOwnerConnectionString2);
+	
+		/*READ JSON FILES STARTS*/
+		//COUNT NO OF JSON FILES IN jsonFiles Folder
+		File directory = new File(DIRECTORY_PATH);
 		int fileCount = directory.list().length;
 		System.out.println("Total Files in JsonFiles is " + fileCount);
 		DeviceList deviceSpecification = null;
-		for (int i = 1; i <= fileCount; i++) {
+		for(int i=1;i<=fileCount;i++) {
 			client = new DeviceClient(iotHubOwnerConnectionString2, protocol);
 			client.open();
 			String fileName = ".\\jsonFiles\\Device_" + i + ".json";
-			// To Read File
+			//To Read File
 			FileReader file = new FileReader(fileName);
-			// Convert file Object to JSON
-			Gson gson = new Gson();// Creating new gson Object
-			deviceSpecification = gson.fromJson(file, DeviceList.class);
-			// String deviceId = deviceSpecification.getDevice_id();
-			// send(deviceId);
-			send(deviceSpecification);
-
+			try {
+				//Convert file Object to JSON
+				Gson gson = new Gson();//Creating new gson Object
+				deviceSpecification = gson.fromJson(file, DeviceList.class);
+				//String deviceId = deviceSpecification.getDevice_id();
+				//send(deviceId);
+				send(deviceSpecification);
+			} catch (Exception e) {
+				System.out.println("ERROR: Unable to read JSON File " + e.getMessage());
+			}
+			
+			
 		}
-
+		
 		/* READ JSON FILES ENDS */
 		/*
 		 * for (int i=0; i<4; i++) { System.out.println("i = "+i); send(deviceId); }
 		 */
 		client.closeNow();
 	}
-
 	private void send(DeviceList deviceSpecification) {
-
+			
 		Gson gson = new Gson();
 		String msgStr = gson.toJson(deviceSpecification);
 		Message msg = new Message(msgStr);
 		System.out.println("Sending: " + msgStr);
-
+		
 		System.out.println("Reported props ");
 		Set<Property> reportedProp = new HashSet<Property>();
 		reportedProp.add(new Property("current_temperature", deviceSpecification.getCurrent_temperature()));
@@ -99,40 +104,41 @@ public class DeviceTelemetryController {
 		reportedProp.add(new Property("drift", deviceSpecification.getDrift()));
 		EventCallback callback = new EventCallback();
 		ContextCallback conCallback = new ContextCallback();
-
+		
 		try {
 			client.startDeviceTwin(callback, null, conCallback, null);
-			client.sendReportedProperties(reportedProp); // -----------------------------------
+			client.sendReportedProperties(reportedProp); //-----------------------------------
 		} catch (IllegalArgumentException | IOException e) {
 			e.printStackTrace();
 		}
 		Object lockobj = new Object();
-
-		client.sendEventAsync(msg, callback, lockobj);
-
-		synchronized (lockobj) {
-			try {
+        
+        client.sendEventAsync(msg, callback, lockobj);
+        
+        synchronized (lockobj) {
+        	try {
 				lockobj.wait();
 			} catch (InterruptedException e) {
 				e.printStackTrace();
 			}
-		}
-
+        }
+		
+		
+		
+		
 	}
-
-	private void send(String deviceName) throws IOException, IotHubException {
-		double maxval = 12.0;
-		double minval = 8.0;
-
+	private void send(String deviceName) throws IOException, IotHubException  {
+        double maxval = 12.0;
+        double minval = 8.0;
+        
 //        DeviceTwinDevice device = new DeviceTwinDevice(deviceId);
 //        twinClient.getTwin(device);
-		Integer temp = (int) ((Math.random() * (maxval - minval)) + minval);
-		Integer humid = (int) ((Math.random() * (maxval - minval)) + minval);
-
-		// Generate data object
-		// {"deviceId": id, "windSpeed": currWindSpeed,
-		// "powerOutput": currPowerOutput, "payerId": "chris@microsoft", "eventDate":
-		// now}
+        Integer temp = (int) ((Math.random() * (maxval- minval)) + minval);
+		Integer humid = (int) ((Math.random() * (maxval- minval)) + minval);
+		
+		//  Generate data object
+		//{"deviceId": id, "windSpeed": currWindSpeed,
+		// "powerOutput": currPowerOutput, "payerId": "chris@microsoft", "eventDate": now}
 		TelemetryHelper telemetryDataPoint = new TelemetryHelper();
 		telemetryDataPoint.setDeviceId(deviceName);
 		telemetryDataPoint.setTemp(temp.toString());
@@ -141,7 +147,7 @@ public class DeviceTelemetryController {
 		String msgStr = telemetryDataPoint.serialize();
 		Message msg = new Message(msgStr);
 		System.out.println("Sending: " + msgStr);
-
+		
 		System.out.println("Reported props ");
 		Set<Property> reportedProp = new HashSet<Property>();
 		reportedProp.add(new Property("temp", temp));
@@ -150,62 +156,63 @@ public class DeviceTelemetryController {
 		ContextCallback conCallback = new ContextCallback();
 		try {
 			client.startDeviceTwin(callback, null, conCallback, null);
-			client.sendReportedProperties(reportedProp); // -----------------------------------
+			client.sendReportedProperties(reportedProp); //-----------------------------------
 		} catch (IllegalArgumentException | IOException e) {
 			e.printStackTrace();
 		}
 		Object lockobj = new Object();
+        
+        client.sendEventAsync(msg, callback, lockobj); //----------------------------
 
-		client.sendEventAsync(msg, callback, lockobj); // ----------------------------
-
-		synchronized (lockobj) {
-			try {
+        synchronized (lockobj) {
+        	try {
 				lockobj.wait();
 			} catch (InterruptedException e) {
 				e.printStackTrace();
 			}
-		}
-	}
-
+        }
+    }
+	
 	@GetMapping("/getProps")
 	public String getDeviceProps() throws IOException, IotHubException {
 		DeviceTwin twinClient = DeviceTwin.createFromConnectionString(iotHubOwnerConnectionString2);
 		DeviceTwinDevice device = new DeviceTwinDevice(deviceId);
 		twinClient.getTwin(device);
 //		DeviceTwinDevice device = new DeviceTwinDevice(deviceId);
-		System.out.println("device.getConnectionState() " + device.getConnectionState());
-		System.out.println("device.desiredPropertiesToString() " + device.desiredPropertiesToString());
-		System.out.println("device.reportedPropertiesToString() " + device.reportedPropertiesToString());
-		System.out.println("DesiredPropertiesVersion() : " + device.getDesiredPropertiesVersion());
-		System.out.println("DesiredProperties() : " + device.getDesiredProperties());
-		System.out.println("ReportedPropertiesVersion() : " + device.getReportedPropertiesVersion());
-		System.out.println("device.getReportedProperties() : " + device.getReportedProperties());
-
+		System.out.println("device.getConnectionState() "+device.getConnectionState());
+		System.out.println("device.desiredPropertiesToString() "+device.desiredPropertiesToString());
+		System.out.println("device.reportedPropertiesToString() "+device.reportedPropertiesToString());
+		System.out.println("DesiredPropertiesVersion() : "+device.getDesiredPropertiesVersion());
+		System.out.println("DesiredProperties() : "+device.getDesiredProperties());
+		System.out.println("ReportedPropertiesVersion() : "+device.getReportedPropertiesVersion());
+		System.out.println("device.getReportedProperties() : "+device.getReportedProperties());
+		
 		return "success";
 	}
-
+	
+	
+	
 	private class EventCallback implements IotHubEventCallback {
-		public void execute(IotHubStatusCode status, Object context) {
-			System.out.println("IoT Hub responded to message with status: " + status.name());
+        public void execute(IotHubStatusCode status, Object context) {
+            System.out.println("IoT Hub responded to message with status: " + status.name());
 
-			if (context != null) {
-				synchronized (context) {
-					context.notify();
-				}
-			}
-		}
-	}
-
+            if (context != null) {
+                synchronized (context) {
+                    context.notify();
+                }
+            }
+        }
+    }
 	private class ContextCallback implements TwinPropertyCallBack {
-		@Override
+        @Override
 		public void TwinPropertyCallBack(Property property, Object context) {
 			System.out.println("IoT Hub responded to TwinProperty with update at: " + property.getLastUpdated());
-			if (context != null) {
-				synchronized (context) {
-					context.notify();
-				}
-			}
+            if (context != null) {
+                synchronized (context) {
+                    context.notify();
+                }
+            }
 		}
-	}
-
+    }
+	
 }

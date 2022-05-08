@@ -45,7 +45,9 @@ public class DeviceController {
 
 			}
 
-			System.out.println(deviceIdList);
+			for(String id : deviceIdList) {
+				System.out.println("device_id " + id);
+			}
 
 			for (DeviceList device : deviceObjList) {
 
