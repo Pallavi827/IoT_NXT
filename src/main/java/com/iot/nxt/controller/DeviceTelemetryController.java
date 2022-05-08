@@ -47,8 +47,8 @@ public class DeviceTelemetryController {
 	}
 	private void sendMessages() throws Exception {
 		
-//		twinClient = DeviceTwin.createFromConnectionString(iotHubOwnerConnectionString2);
-		
+		//twinClient = DeviceTwin.createFromConnectionString(iotHubOwnerConnectionString2);
+	
 		/*READ JSON FILES STARTS*/
 		//COUNT NO OF JSON FILES IN jsonFiles Folder
 		File directory = new File(".\\jsonFiles");
